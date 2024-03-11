@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Distraction Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin: 20px auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        h2 {
+            margin-top: 20px;
+            color: #333;
+        }
+
+        img {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Driver Distraction Detection</h1>
+    <form action="/capture" method="post" enctype="multipart/form-data">
+        <button type="submit">Capture My Image</button>
+    </form>
+
+    {% if output is defined %}
+        <h2>Output: {{ output }}</h2>
+    {% endif %}
+
+    {% if annotated_image_b64 is defined %}
+        <img src="data:image/jpeg;base64,{{ annotated_image_b64 }}" alt="Annotated Image">
+    {% endif %}
+</body>
+</html>
