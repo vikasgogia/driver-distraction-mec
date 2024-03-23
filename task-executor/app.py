@@ -1,15 +1,19 @@
 import time
 from executor.ImgProcessor import *
 from executor.Task import *
-from yolov5.yolo_api import *
+# from yolov5.yolo_api import *
 from scheduler.Scheduler import *
 
 from flask import Flask, request, jsonify
+from flask_socketio import SocketIO, emit
 
 ERROR_KEY = "error"
 SUCCESS_KEY = "success"
 
 app = Flask(__name__)
+socketio = SocketIO(app)
+# Dictionary to store WebSocket connections
+connected_clients = {}
 
     
 # @app.route('/', methods=['GET'])
@@ -73,6 +77,13 @@ app = Flask(__name__)
 #     end_time = time.time()
 #     return jsonify({"annotated": annotated_imgs, "proctime": end_time-start_time}), 200
 
+@socketio.on('task')
+def execute_task(data):
+    socket_id = request.sid
+    connected_clients[socket_id] = True
+    frames = data['frames']
+    task_id = data['task_id']
+    task_scheduler.submit_task(Task(socket_id, task_id, frames))
 
 @app.route('/task-upload', methods=['POST'])
 def upload_task():
@@ -88,7 +99,7 @@ def upload_task():
     return jsonify({"proctime": (end_time - start_time)}), 200
 
 if __name__ == '__main__':
-    task_scheduler = Scheduler()
+    task_scheduler = Scheduler(socketio)
     try:
         task_scheduler.init()
     except Exception as e:

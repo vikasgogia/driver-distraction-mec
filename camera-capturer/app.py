@@ -2,11 +2,13 @@ import cv2
 import requests
 import os
 import time
+import uuid
 
 from utils.constants import *
 from utils.util import *
 
 from flask import Flask, request, render_template
+from flask_socketio import SocketIO, emit
 from signalsdk.signal_app import SignalApp
 from CameraConnectorConfig import CameraConnectorConfig
 
@@ -36,6 +38,8 @@ config = CameraConnectorConfig()
 # os.environ[Constants.APPLICATION_ID] = config.appId
 # signalApp = SignalApp()
 app = create_app()
+# socketio = SocketIO(app)
+# client = Client()
 # signalApp.initialize(onConfigChange, None)
 camera = cv2.VideoCapture(config.cameraEndpoint)
 
@@ -108,9 +112,56 @@ def proc_time():
 
     except requests.exceptions.RequestException as e:
         return generateResponse(Constants.FAIL_KEY, f"Issue with sending the image - {e}."), 400
+    
+    
+    
 
 
 
+socketio = SocketIO(app)
+websocket_urls = {
+    'local': 'http://localhost:5001/',
+    'remote': 'http://localhost:5002/'
+}
+
+socket_clients = {}
+tasks = {}
+for key, url in websocket_urls.items():
+    socket_clients[key] = SocketIO(app, logger=True, async_mode='threading', engineio_logger=True, async_handlers=True)
+    # socket_clients[key].connect(url)
+
+
+@socketio.on('processed-task')
+def fetch_processed_task(data):
+    print(data)
+
+@app.route('/send-task', methods=["POST"])
+def send_task():
+    '''
+        API
+    '''
+    if not request.method == "POST":
+        return generateResponse(Constants.ERROR_KEY, "Only POST requests are allowed."), 400
+    video_path = r'C:\Users\vikas\Downloads\project_uottawa\driver-distraction-mec\meta\vid.mp4'
+    cap = cv2.VideoCapture(video_path)
+    frames = {}
+    num_frames_to_capture = 60
+    for i in range(num_frames_to_capture):
+        ret, frame = cap.read()
+        if not ret:
+            return generateResponse(Constants.ERROR_KEY, "Failed to capture an image."), 400
+        _, image_data = cv2.imencode(Constants.JPG, frame)
+        frames[f'image_{i}'] = ("captured_image.jpg", image_data.tobytes(), "image/jpeg")
+    try:
+        # url = decision(frames)
+        server_key = 'local'
+        task_id = uuid.uuid4()
+        tasks[task_id] = True
+        socket_clients[server_key].emit('task', {'task_id': task_id, 'frames': frames})
+        return 200
+
+    except requests.exceptions.RequestException as e:
+        return generateResponse(Constants.FAIL_KEY, f"Issue with sending the image - {e}."), 400
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000, threaded=True)
+    socketio.run(app, host="0.0.0.0", port=3000)

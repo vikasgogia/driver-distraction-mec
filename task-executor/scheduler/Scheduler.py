@@ -10,11 +10,12 @@ class Scheduler():
         FCFS = 1
         SJF = 2
         
-    def __init__(self, algorithm=Scheduling.FCFS):
+    def __init__(self, socketio, algorithm=Scheduling.FCFS):
         self.logger = logging.getLogger(__name__)
         self.__algorithm = algorithm
         self.__task_queue = Queue()
         self.__client_responses = {}
+        self.socketio = socketio
             
     def init(self):
         try:
@@ -31,9 +32,14 @@ class Scheduler():
     def __process_tasks(self):
         while True:
             try:
-                task = self.__task.get()
+                task = self.__task_queue.get()
                 task = self.__img_processor.task_images_processing(task)
-                self.client_responses[task.id] = task
+                # self.client_responses[task.id] = task
+                client_socket = self.socketio.server.manager.get_client_by_sid(task.id)
+                if client_socket:
+                    client_socket.emit('processed_task', {'task_id': task.task_id, 'task': task.to_dict()})
+                    client_socket.disconnect()
+                
             except Exception as e:
                 self.logger.error(f'Error loading model: {str(e)}')
                 raise e

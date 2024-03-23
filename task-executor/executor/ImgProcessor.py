@@ -1,10 +1,10 @@
-import Task
+from executor.Task import *
 import argparse
 import base64
 import io
 import torch
 import logging
-from yolov5.yolo_api import *
+# from yolov5.yolo_api import *
 from PIL import Image, ImageDraw
 
 class ImgProcessor():
