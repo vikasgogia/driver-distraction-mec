@@ -4,7 +4,6 @@ import base64
 import io
 import torch
 import logging
-# from yolov5.yolo_api import *
 from PIL import Image, ImageDraw
 
 class ImgProcessor():
@@ -40,13 +39,15 @@ class ImgProcessor():
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
     
     def task_images_processing(self, task: Task):
-        for idx, image in task.images.items():
+        idx = 0
+        for image in task.images:
             try:
-                img = Image.open(io.BytesIO(image.read()))
+                img = Image.open(image)
                 results = self.__model(img, size=640)
                 img_b64 = self.__save_annotated_image(img.copy(), results.pandas().xyxy[0].to_dict(orient="records"))
                 task.annotated_images[f"annotated_{idx}"] = img_b64
+                idx+=1
             except Exception as e:
-                self.logger.error(f'Error loading model: {str(e)}')
+                self.logger.error(f'while image processing: {str(e)}')
                 return None
         return task
