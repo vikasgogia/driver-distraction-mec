@@ -2,6 +2,7 @@ import cv2
 import requests
 import os
 import uuid
+import threading
 import base64
 from utils.constants import *
 from utils.util import *
@@ -38,6 +39,33 @@ config = CameraConnectorConfig()
 app = create_app()
 # signalApp.initialize(onConfigChange, None)
 camera = cv2.VideoCapture(config.cameraEndpoint)
+
+queue_size_local = 0
+processing_time_local = 0
+
+queue_size_remote = 0
+processing_time_remote = 0
+
+lock_1 = threading.Lock()
+lock_2 = threading.Lock()
+
+@app.route('/update-local', methods=['POST'])
+def update_data_1():
+    global queue_size_local, processing_time_local
+    data = request.json
+    with lock_1:
+        queue_size_local = data.get('queue_size', 0)
+        processing_time_local = data.get('estimated_processing_time', 0)
+    return jsonify(success=True)
+
+@app.route('/update-remote', methods=['POST'])
+def update_data_2():
+    global queue_size_remote, processing_time_remote
+    data = request.json
+    with lock_2:
+        queue_size_remote = data.get('queue_size', 0)
+        processing_time_remote = data.get('estimated_processing_time', 0)
+    return jsonify(success=True)
 
 @app.route('/', methods=["GET"])
 def ping():
@@ -142,8 +170,14 @@ def send_task():
     except requests.exceptions.RequestException as e:
         return generateResponse(Constants.FAIL_KEY, f"Issue with sending the image - {e}."), 400
     
-def run_app():
-    app.run(host="0.0.0.0", port=3000, threaded=True)
+def make_decision():
+    global queue_size_local, processing_time_local, queue_size_remote, processing_time_remote
+    with lock_1, lock_2:
+        if queue_size_local*processing_time_local > queue_size_remote*processing_time_remote:
+            decision = "remote"
+        else:
+            decision = "local"
+        return decision
     
 if __name__ == "__main__":
     app.run( host="0.0.0.0", port=3000, threaded=True)
