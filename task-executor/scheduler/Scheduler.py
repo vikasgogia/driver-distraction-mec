@@ -1,4 +1,6 @@
 import requests
+import pandas as pd
+import time
 import threading
 from enum import Enum
 from queue import Queue
@@ -16,6 +18,7 @@ class Scheduler():
         self.__algorithm = algorithm
         self.__task_queue = Queue()
         self.__client_responses = {}
+        self.df = pd.DataFrame(columns=['TaskId', 'Number of frames', 'Waiting Time', 'Processing Time', 'Is Dropped?'])
             
     def init(self):
         try:
@@ -28,15 +31,28 @@ class Scheduler():
         except Exception as e:
             self.logger.error(f'Error loading model: {str(e)}')
             raise e
-            
+    
+    def get_queue_size(self):
+        return self.__task_queue.qsize()
+    
     def __process_tasks(self):
         while True:
             try:
                 task = self.__task_queue.get()
                 if not task:
                     continue
+                task.end_wait = time.time()
+                start_proc = time.time()
                 task = self.__img_processor.task_images_processing(task)
                 print(task)
+                end_proc = time.time()
+                self.df.loc[len(self.df)] = {
+                    'TaskId': task.id, 
+                    'Number of frames': len(task.annotated_images), 
+                    'Waiting Time': task.end_wait - task.start_wait, 
+                    'Processing Time': end_proc - start_proc, 
+                    'Is Dropped?': 0
+                }
                 requests.post(f'http://{task.id}:3000/receive-task', files=task.annotated_images)
                 
             except Exception as e:

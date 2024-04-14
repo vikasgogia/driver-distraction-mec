@@ -2,6 +2,7 @@ import cv2
 import requests
 import os
 import uuid
+import time
 import threading
 import base64
 from utils.constants import *
@@ -164,20 +165,64 @@ def send_task():
     try:
         # task_id = uuid.uuid4()
         # tasks[task_id] = True
-        response = requests.post(f'{config.localExecutorEndpoint}/task-upload', files=frames)
+        decision = make_decision()
+        url = f'{config.localExecutorEndpoint}/task-upload' if decision == 0 else f'{config.remoteExecutorEndpoint}/task-upload'
+        response = requests.post(url, files=frames)
         response.raise_for_status()
         return generateResponse(Constants.SUCCESS_KEY, f"Pass"), 200
     except requests.exceptions.RequestException as e:
         return generateResponse(Constants.FAIL_KEY, f"Issue with sending the image - {e}."), 400
     
 def make_decision():
-    global queue_size_local, processing_time_local, queue_size_remote, processing_time_remote
+    '''
+        function to make decision based on the queue metadata
+        0 - local, 1 - remote
+    '''
+    global queue_size_local, queue_size_remote
     with lock_1, lock_2:
-        if queue_size_local*processing_time_local > queue_size_remote*processing_time_remote:
-            decision = "remote"
-        else:
-            decision = "local"
-        return decision
-    
+        return (queue_size_local > queue_size_remote) 
+
+def update_qsize_local():
+    '''
+        function to fetch local queue metadata
+    '''
+    global queue_size_local
+    try:
+        response = requests.post(f"${config.localExecutorEndpoint}/queue-metadata")
+        response_data = response.json()
+        with lock_1:
+            queue_size_local = response_data.get('qsize', 0)
+            print(f"local queue size: {queue_size_local}")
+    except Exception as e:
+        print(f"Error updating local queue size: {e}")
+
+def update_qsize_remote():
+    '''
+        function to fetch remote queue metadata
+    '''
+    global queue_size_remote
+    try:
+        response = requests.post(f"${config.remoteExecutorEndpoint}/queue-metadata")
+        response_data = response.json()
+        with lock_2:
+            queue_size_remote = response_data.get('queue_size', 0)
+            print(f"remote queue size: {queue_size_remote}")
+    except Exception as e:
+        print(f"Error updating remote queue size: {e}")
+        
+def start_threading():
+    '''
+        function to initiate threads for fetching queue data
+    '''
+    while True:
+        thread_local = threading.Thread(target=update_qsize_local)
+        thread_remote = threading.Thread(target=update_qsize_remote)
+        thread_local.start()
+        thread_remote.start()
+        thread_local.join()
+        thread_remote.join()
+        time.sleep(10)
+
 if __name__ == "__main__":
+    threading.Thread(target=start_threading).start()
     app.run( host="0.0.0.0", port=3000, threaded=True)

@@ -1,4 +1,5 @@
 # import uuid
+import time
 
 class Task():
     
@@ -7,3 +8,5 @@ class Task():
         self.task_id = task_id
         self.images = images
         self.annotated_images = {}
+        self.start_wait = time.time()
+        self.end_wait = time.time()

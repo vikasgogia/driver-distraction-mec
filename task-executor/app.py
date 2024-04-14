@@ -1,4 +1,5 @@
 import time
+import signal
 from executor.ImgProcessor import *
 from executor.Task import *
 from scheduler.Scheduler import *
@@ -80,17 +81,43 @@ def upload_task():
 
     images = []
     for _, image in request.files.items():
-            try:
-                image_bytes = image.read()
-                bytes_io = io.BytesIO(image_bytes)
-                images.append(bytes_io)
-            except Exception as e:
-                print(e)
+        try:
+            image_bytes = image.read()
+            bytes_io = io.BytesIO(image_bytes)
+            images.append(bytes_io)
+        except Exception as e:
+            print(e)
 
     task = Task(request.remote_addr, "dnsakn", images)
     task_scheduler.submit_task(task)
     end_time = time.time()
     return jsonify({"proctime": (end_time - start_time)}), 200
+
+@app.route('/queue-metadata', methods=['POST'])
+def queue_metadata():
+    # TODO: incorporate logic for avergae processing time
+    qsize = task_scheduler.get_queue_size()
+    return jsonify({'qsize': qsize})
+
+
+# Define your clean-up function
+def cleanup_before_shutdown():
+    print("Performing clean-up tasks before shutdown...")
+    # Perform any necessary clean-up tasks here
+    # For example, closing database connections, releasing resources, etc.
+    print(task_scheduler.df)
+    
+    # time.sleep(2)  # Simulate a clean-up task taking 2 seconds
+    print("Clean-up complete.")
+
+# Register the clean-up function for SIGINT and SIGTERM signals
+def handle_termination_signal(signal_number, frame):
+    cleanup_before_shutdown()
+    exit(0)  # Exit the program with code 0 (success)
+
+# Register the termination signal handler
+signal.signal(signal.SIGINT, handle_termination_signal)
+signal.signal(signal.SIGTERM, handle_termination_signal)
 
 if __name__ == '__main__':
     task_scheduler = Scheduler()
