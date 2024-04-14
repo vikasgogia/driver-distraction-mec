@@ -5,7 +5,7 @@ class CameraConnectorConfig:
     
     def __init__(self):
         self.cameraEndpoint = 0
-        self.remoteExecutorEndpoint = None
+        self.remoteExecutorEndpoint = 'http://127.0.0.1:5002'
         self.localExecutorEndpoint = 'http://127.0.0.1:5001'
         self.appId = "65bd5b4573f487d9b6cdebfe"
         self.secretKey = "Wesley Clover"
@@ -19,7 +19,7 @@ class CameraConnectorConfig:
             return
         try:
             self.cameraEndpoint = convertSringToInteger(removeSpaces(config.get(Constants.CAM_ENDPOINT, "0")))
-            self.remoteExecutorEndpoint = removeSpaces(config.get(Constants.REMOTE_ENDPOINT, "http://127.0.0.1:5001"))
+            self.remoteExecutorEndpoint = removeSpaces(config.get(Constants.REMOTE_ENDPOINT, "http://127.0.0.1:5002"))
             self.localExecutorEndpoint = removeSpaces(config.get(Constants.LOCAL_ENDPOINT, "http://127.0.0.1:5001"))
         except Exception as e:
             print(f"Exception: {e}")

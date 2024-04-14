@@ -188,7 +188,7 @@ def update_qsize_local():
     '''
     global queue_size_local
     try:
-        response = requests.post(f"${config.localExecutorEndpoint}/queue-metadata")
+        response = requests.post(f"{config.localExecutorEndpoint}/queue-metadata")
         response_data = response.json()
         with lock_1:
             queue_size_local = response_data.get('qsize', 0)
@@ -202,7 +202,7 @@ def update_qsize_remote():
     '''
     global queue_size_remote
     try:
-        response = requests.post(f"${config.remoteExecutorEndpoint}/queue-metadata")
+        response = requests.post(f"{config.remoteExecutorEndpoint}/queue-metadata")
         response_data = response.json()
         with lock_2:
             queue_size_remote = response_data.get('queue_size', 0)
