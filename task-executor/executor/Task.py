@@ -10,3 +10,7 @@ class Task():
         self.annotated_images = {}
         self.start_wait = time.time()
         self.end_wait = time.time()
+    
+    def __lt__(self, other):
+        # Define your comparison logic here. For example, comparing the number of images:
+        return len(self.images) < len(other.images)
