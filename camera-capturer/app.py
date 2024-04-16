@@ -4,6 +4,7 @@ import os
 import uuid
 import time
 import threading
+import random
 import base64
 from utils.constants import *
 from utils.util import *
@@ -12,6 +13,7 @@ from signalsdk.signal_app import SignalApp
 from CameraConnectorConfig import CameraConnectorConfig
 from werkzeug.utils import secure_filename
 
+random.seed(10)
 camera = None
 
 def create_app():
@@ -154,7 +156,8 @@ def send_task():
     video_path = r'C:\Users\vikas\Downloads\driver-distraction-mec\meta\vid.mp4'
     cap = cv2.VideoCapture(video_path)
     frames = {}
-    num_frames_to_capture = 60
+    # num_frames_to_capture = 60
+    num_frames_to_capture = random.randint(10, 120)
     for i in range(num_frames_to_capture):
         ret, frame = cap.read()
         if not ret:
@@ -172,6 +175,19 @@ def send_task():
         return generateResponse(Constants.SUCCESS_KEY, f"Pass"), 200
     except requests.exceptions.RequestException as e:
         return generateResponse(Constants.FAIL_KEY, f"Issue with sending the image - {e}."), 400
+    
+@app.route('/record', methods=['GET'])
+def record():
+    try:
+        response_local = requests.get(f'{config.localExecutorEndpoint}/record')
+        response_remote = requests.get(f'{config.remoteExecutorEndpoint}/record')
+        print(response_local, response_remote)
+        if response_local == 'success' and response_remote == 'success':
+            return 'success'
+        else:
+            return 'fail' 
+    except Exception as e:
+        return f'{e}'
     
 def make_decision():
     '''
@@ -205,7 +221,7 @@ def update_qsize_remote():
         response = requests.post(f"{config.remoteExecutorEndpoint}/queue-metadata")
         response_data = response.json()
         with lock_2:
-            queue_size_remote = response_data.get('queue_size', 0)
+            queue_size_remote = response_data.get('qsize', 0)
             print(f"remote queue size: {queue_size_remote}")
     except Exception as e:
         print(f"Error updating remote queue size: {e}")
@@ -221,7 +237,7 @@ def start_threading():
         thread_remote.start()
         thread_local.join()
         thread_remote.join()
-        time.sleep(10)
+        time.sleep(5)
 
 if __name__ == "__main__":
     threading.Thread(target=start_threading).start()
