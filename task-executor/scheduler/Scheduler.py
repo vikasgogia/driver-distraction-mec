@@ -58,6 +58,7 @@ class Scheduler():
                 
                 # 3 minutes waiting time is a deadline
                 if (task.end_wait - task.start_wait) > 180:
+                    self.total_tasks += 1
                     self.dropped_tasks_cnt += 1
                     # self.df.loc[len(self.df)] = {
                     #     'TaskId': task.id, 
