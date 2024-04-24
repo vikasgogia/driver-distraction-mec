@@ -127,7 +127,7 @@ signal.signal(signal.SIGINT, handle_termination_signal)
 signal.signal(signal.SIGTERM, handle_termination_signal)
 
 if __name__ == '__main__':
-    task_scheduler = Scheduler(Scheduler.Scheduling.FCFS)
+    task_scheduler = Scheduler(Scheduler.Scheduling.SJF)
     try:
         task_scheduler.init()
     except Exception as e:
