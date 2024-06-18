@@ -3,6 +3,7 @@ import signal
 import pandas as pd
 from executor.ImgProcessor import *
 from executor.Task import *
+from scheduler.genetic.GeneticScheduler import *
 from scheduler.Scheduler import *
 from flask import Flask, request, jsonify
 
@@ -127,9 +128,10 @@ signal.signal(signal.SIGINT, handle_termination_signal)
 signal.signal(signal.SIGTERM, handle_termination_signal)
 
 if __name__ == '__main__':
-    task_scheduler = Scheduler(Scheduler.Scheduling.SJF)
+    # task_scheduler = Scheduler(Scheduler.Scheduling.SJF)
+    task_scheduler = GeneticScheduler()
     try:
         task_scheduler.init()
     except Exception as e:
         exit(1)
-    app.run(host='0.0.0.0', port=5001, threaded=True)
+    app.run(host='0.0.0.0', port=5002, threaded=True)
