@@ -4,6 +4,7 @@ from utils.util import *
 class CameraConnectorConfig:
     
     def __init__(self):
+        self.isTotalRemote = True
         self.cameraEndpoint = 0
         self.remoteExecutorEndpoint = 'http://127.0.0.1:5002'
         self.localExecutorEndpoint = 'http://127.0.0.1:5001'

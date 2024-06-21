@@ -8,10 +8,12 @@ from queue import Queue
 from executor.ImgProcessor import *
 from executor.Task import *
 from scheduler.genetic.GeneticAlgorithm import GeneticAlgorithm
+from scheduler.milp.MILPAlgorithm import MILPAlgorithm
 
-class GeneticScheduler():
+class OptimizationScheduler:
         
-    def __init__(self):
+    def __init__(self, algorithm=GeneticAlgorithm()):
+        self.algorithm = algorithm
         self.logger = logging.getLogger(__name__)
         self.__MAX_TASKS = 10
         self.__pending_queue = Queue()
@@ -58,9 +60,9 @@ class GeneticScheduler():
                         ga_tasks.append([pending.arrival_time, pending.deadline, pending.expected_processing_time])
                     
                     print(ga_tasks)
-                    geneticAlgo = GeneticAlgorithm(ga_tasks)
-                    
-                    [ga_tasks, min_waiting_time, min_tasks_dropped] = geneticAlgo.solve()
+
+                    self.algorithm.setTasks(ga_tasks)
+                    [ga_tasks, min_waiting_time, min_tasks_dropped] = self.algorithm.solve()
 
                     print(ga_tasks, min_tasks_dropped, min_waiting_time)
                     self.dropped_tasks_cnt += min_tasks_dropped

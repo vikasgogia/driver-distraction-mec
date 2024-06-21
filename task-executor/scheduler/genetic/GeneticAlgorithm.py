@@ -1,9 +1,9 @@
 from geneticalgorithm import geneticalgorithm as ga
 import numpy as np
 
-class GeneticAlgorithm:
+class GeneticAlgorithm():
 
-    def __init__(self, tasks, lambda_factor=0.5, max_iterations=50, population_size=100):
+    def setTasks(self, tasks, lambda_factor=0.5, max_iterations=50, population_size=100):
         self.tasks = tasks
         self.N = len(tasks)  # Number of tasks
         self.lambda_factor = lambda_factor
@@ -13,6 +13,7 @@ class GeneticAlgorithm:
         self.min_total_waiting_time = float('inf')
         self.min_total_dropped_tasks = float('inf')
         self.best_solution = None
+
 
     def objective_function(self, X):
         self.cpu_time = 0
@@ -61,7 +62,7 @@ class GeneticAlgorithm:
         objective = self.lambda_factor * total_waiting_time + (1 - self.lambda_factor) * dropped_ratio
         return objective
 
-    def run_ga(self):
+    def solve(self):
         varbound = np.array([[0, 1]] * self.N)
 
         algorithm_param = {

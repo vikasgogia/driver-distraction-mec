@@ -168,21 +168,32 @@ def send_task():
     try:
         # task_id = uuid.uuid4()
         # tasks[task_id] = True
-        decision = make_decision()
+        if config.isTotalRemote:
+            decision = 1
+        else: 
+            decision = make_decision()
+
         url = f'{config.localExecutorEndpoint}/task-upload' if decision == 0 else f'{config.remoteExecutorEndpoint}/task-upload'
         response = requests.post(url, files=frames)
         response.raise_for_status()
+
         return generateResponse(Constants.SUCCESS_KEY, f"Pass"), 200
+
     except requests.exceptions.RequestException as e:
         return generateResponse(Constants.FAIL_KEY, f"Issue with sending the image - {e}."), 400
     
 @app.route('/record', methods=['GET'])
 def record():
     try:
-        response_local = requests.get(f'{config.localExecutorEndpoint}/record')
+        if not config.isTotalRemote:
+            response_local = requests.get(f'{config.localExecutorEndpoint}/record')
+        else:
+            response_local = None
         response_remote = requests.get(f'{config.remoteExecutorEndpoint}/record')
         print(response_local, response_remote)
-        if response_local == 'success' and response_remote == 'success':
+        if (response_local and response_local == 'success') and response_remote == 'success':
+            return 'success'
+        elif not response_local and response_remote == 'success':
             return 'success'
         else:
             return 'fail' 
@@ -240,5 +251,6 @@ def start_threading():
         time.sleep(5)
 
 if __name__ == "__main__":
-    threading.Thread(target=start_threading).start()
+    if not config.isTotalRemote:
+        threading.Thread(target=start_threading).start()
     app.run( host="0.0.0.0", port=3000, threaded=True)

@@ -3,7 +3,9 @@ import signal
 import pandas as pd
 from executor.ImgProcessor import *
 from executor.Task import *
-from scheduler.genetic.GeneticScheduler import *
+from scheduler.genetic.GeneticAlgorithm import GeneticAlgorithm
+from scheduler.milp.MILPAlgorithm import MILPAlgorithm
+from scheduler.OptimizationScheduler import OptimizationScheduler
 from scheduler.Scheduler import *
 from flask import Flask, request, jsonify
 
@@ -120,7 +122,7 @@ def cleanup_before_shutdown():
 def handle_termination_signal(signal_number=None, frame=None):
     # cleanup_before_shutdown()
     task_scheduler.record_run()
-    task_scheduler.df.to_csv('record_local.csv', index=False)
+    task_scheduler.df.to_csv('record_remote.csv', index=False)
     exit(0)  # Exit the program with code 0 (success)
 
 # Register the termination signal handler
@@ -129,7 +131,7 @@ signal.signal(signal.SIGTERM, handle_termination_signal)
 
 if __name__ == '__main__':
     # task_scheduler = Scheduler(Scheduler.Scheduling.SJF)
-    task_scheduler = GeneticScheduler()
+    task_scheduler = OptimizationScheduler(MILPAlgorithm())
     try:
         task_scheduler.init()
     except Exception as e:
