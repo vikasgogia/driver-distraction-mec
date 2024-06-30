@@ -3,7 +3,7 @@ import numpy as np
 
 class GeneticAlgorithm():
 
-    def setTasks(self, tasks, lambda_factor=0.5, max_iterations=50, population_size=100):
+    def setTasks(self, tasks, lambda_factor=0.5, max_iterations=100, population_size=100):
         self.tasks = tasks
         self.N = len(tasks)  # Number of tasks
         self.lambda_factor = lambda_factor
@@ -13,6 +13,7 @@ class GeneticAlgorithm():
         self.min_total_waiting_time = float('inf')
         self.min_total_dropped_tasks = float('inf')
         self.best_solution = None
+        self.best_objective = float('inf')
 
 
     def objective_function(self, X):
@@ -53,16 +54,24 @@ class GeneticAlgorithm():
         # Update global minimums if current solution is better
                     
         # if total_waiting_time < self.min_total_waiting_time:
-        if total_dropped < self.min_total_dropped_tasks:
-            self.min_total_waiting_time = total_waiting_time
-            self.min_total_dropped_tasks = total_dropped
-            self.best_solution = X.copy()
+        # if total_dropped < self.min_total_dropped_tasks and total_waiting_time < self.min_total_waiting_time:
+        #     self.min_total_waiting_time = total_waiting_time
+        #     self.min_total_dropped_tasks = total_dropped
+        #     self.best_solution = X.copy()
 
         dropped_ratio = total_dropped / self.N  # Calculate the ratio of dropped tasks
         objective = self.lambda_factor * total_waiting_time + (1 - self.lambda_factor) * dropped_ratio
+        
+        if objective < self.best_objective:
+            self.best_objective = objective
+            self.best_solution = X.copy()
+            self.min_total_waiting_time = total_waiting_time
+            self.min_total_dropped_tasks = total_dropped
+
         return objective
 
     def solve(self):
+        if(self.N <= 0): return
         varbound = np.array([[0, 1]] * self.N)
 
         algorithm_param = {
@@ -88,29 +97,7 @@ class GeneticAlgorithm():
 
         # Decode the best solution to get the order of tasks
         if self.best_solution is not None:
-            print(self.best_solution)
             task_order = [i for i in range(self.N) if self.best_solution[i] == 1]
             return task_order, self.min_total_waiting_time, self.min_total_dropped_tasks
         else:
             return None, self.min_total_waiting_time, self.min_total_dropped_tasks
-
-# # Example usage:
-# tasks = np.array([
-#     [1, 10, 2],  # Task 1
-#     [2, 12, 3],  # Task 2
-#     [1, 9, 2],   # Task 3
-#     [3, 13, 3],  # Task 4
-#     [4, 14, 1],  # Task 5
-#     [2, 11, 2],  # Task 6
-#     [5, 16, 4],  # Task 7
-#     [6, 17, 3],  # Task 8
-#     [4, 15, 2],  # Task 9
-#     [7, 18, 3]   # Task 10
-# ])
-
-# scheduler = TaskScheduler(tasks)
-# best_order, min_waiting_time, min_dropped_tasks = scheduler.schedule_tasks()
-
-# print("Best order of tasks to run:", best_order)
-# print("Minimum Total Normalized Waiting Time:", min_waiting_time)
-# print("Minimum Total Dropped Tasks:", min_dropped_tasks)

@@ -3,7 +3,7 @@ import signal
 import pandas as pd
 from executor.ImgProcessor import *
 from executor.Task import *
-from scheduler.genetic.GeneticAlgorithm import GeneticAlgorithm
+from scheduler.genetic.GeneticScheduler import GeneticScheduler
 from scheduler.milp.MILPAlgorithm import MILPAlgorithm
 from scheduler.OptimizationScheduler import OptimizationScheduler
 from scheduler.Scheduler import *
@@ -74,9 +74,12 @@ def upload_image1():
     end_time = time.time()
     return jsonify({"annotated": annotated_imgs, "proctime": end_time-start_time}), 200
 
+
+
 @app.route('/task-upload', methods=['POST'])
 def upload_task():
     start_time = time.time()
+    
     if not request.method == "POST":
         return jsonify({ERROR_KEY: "Only POST requests are allowed"}), 400
     
@@ -92,10 +95,13 @@ def upload_task():
         except Exception as e:
             print(e)
 
-    task = Task(request.remote_addr, "dnsakn", images)
+    task = Task(id=request.remote_addr, images=images)
     task_scheduler.submit_task(task)
     end_time = time.time()
     return jsonify({"proctime": (end_time - start_time)}), 200
+
+
+
 
 @app.route('/queue-metadata', methods=['POST'])
 def queue_metadata():
@@ -131,9 +137,12 @@ signal.signal(signal.SIGTERM, handle_termination_signal)
 
 if __name__ == '__main__':
     # task_scheduler = Scheduler(Scheduler.Scheduling.SJF)
-    task_scheduler = OptimizationScheduler(MILPAlgorithm())
+
+    # initialize genetic scheduler
+    task_scheduler = GeneticScheduler()
     try:
         task_scheduler.init()
     except Exception as e:
         exit(1)
+
     app.run(host='0.0.0.0', port=5002, threaded=True)
