@@ -62,10 +62,10 @@ class GeneticScheduler():
                     
                     if(len(ga_tasks) == 0): continue
 
-                    geneticAlgo = GeneticAlgorithm()
-                    geneticAlgo.setTasks(ga_tasks)
+                    geneticAlgo = GeneticAlgorithm(ga_tasks)
+                    # geneticAlgo.setTasks(ga_tasks)
                     
-                    [ga_tasks, min_waiting_time, min_tasks_dropped] = geneticAlgo.solve()
+                    [ga_tasks, min_waiting_time, min_tasks_dropped] = geneticAlgo.run()
 
                     print(ga_tasks, min_tasks_dropped, min_waiting_time)
                     self.dropped_tasks_cnt += min_tasks_dropped
