@@ -103,111 +103,133 @@
 #             return None, self.min_total_waiting_time, self.min_total_dropped_tasks
 
 import numpy as np
-import random
 
 class GeneticAlgorithm:
-
-    def __init__(self, task_prop_total, population_size=3000, num_generations=500, mutation_rate=0.5):
+    
+    def __init__(self, task_prop_total, t_current=0, population_size=3000, num_generations=100, mutation_rate=0.7):
         self.task_prop_total = np.array(task_prop_total)
-        self.N = self.task_prop_total.shape[0] - 12
-        self.task_prop = self.task_prop_total[:self.N, :]
-        self.t_exp = self.task_prop[:, 1] + self.task_prop[:, 0]
+        print("submitted tasks = ", task_prop_total)
+        self.t_current = t_current
         self.population_size = population_size
         self.num_generations = num_generations
         self.mutation_rate = mutation_rate
-        self.chromosome_length = self.N
-        self.tournament_size = int(0.1 * self.population_size)
-        self.population = self.initialize_population()
+        self.chromosome_length = self.task_prop_total.shape[0]
+        self.tournament_size = int(0.1 * population_size)
 
-    def initialize_population(self):
-        population = np.zeros((self.population_size, self.chromosome_length), dtype=int)
-        for i in range(self.population_size):
-            if i == 1:
-                population[i, :] = np.arange(1, self.chromosome_length + 1)
-            elif i == 2:
-                ind = np.argsort(self.task_prop[:, 2])
-                ind1 = np.argsort(ind)
-                population[i, :] = ind1
-            elif i == 3:
-                ind = np.argsort(self.task_prop[:, 1])
-                ind1 = np.argsort(ind)
-                population[i, :] = ind1
-            else:
-                population[i, :] = np.random.permutation(self.chromosome_length)
-        return population
+    def offloading_obj_fcn2(self, x):
+        N = self.task_prop.shape[0]
+        t_w = np.zeros(N)
 
-    def offloading_obj_fcn(self, chromosome):
-        return sum(chromosome)
+        x_sort, ind = np.sort(x), np.argsort(x)
 
-    def evaluate_fitness(self):
-        return np.array([self.offloading_obj_fcn(ind) for ind in self.population])
-
-    def selection(self, fitness):
-        new_population = np.zeros_like(self.population)
-        for i in range(self.population_size):
-            tournament_indices = np.random.randint(self.population_size, size=self.tournament_size)
-            best_idx = np.argmin(fitness[tournament_indices])
-            new_population[i, :] = self.population[tournament_indices[best_idx], :]
-        return new_population
-
-    def mutation(self, population):
-        for i in range(self.population_size):
-            if random.random() < self.mutation_rate:
-                population[i, :] = np.random.permutation(self.chromosome_length)
-        return population
-
-    def run(self):
-        for generation in range(self.num_generations):
-            fitness = self.evaluate_fitness()
-            
-            # Selection
-            new_population = self.selection(fitness)
-            
-            # Mutation
-            new_population = self.mutation(new_population)
-            
-            # Evaluate fitness of the new population
-            fitness = self.evaluate_fitness()
-            
-            # Replace old population with new population
-            self.population = new_population
-            
-            # Display best fitness
-            best_fitness = np.min(fitness)
-            print(f'Generation {generation + 1}: Best Fitness = {best_fitness}')
-
-        # Display final result
-        best_fitness = np.min(fitness)
-        best_index = np.argmin(fitness)
-        best_solution = self.population[best_index, :]
-
-        t_w = np.zeros(self.N)
-        sorted_indices = np.argsort(best_solution)
-        for i in range(self.N):
-            t_w[i] = sum(self.task_prop[sorted_indices[:best_solution[i] - 1], 2])
+        for i in range(N):
+            for j in range(x[i] - 1):
+                t_w[i] += self.task_prop[ind[j], 2]
 
         t_w_n = (t_w - np.min(t_w)) / (np.max(t_w) - np.min(t_w))
-
         t_exp = self.task_prop[:, 1] + self.task_prop[:, 0]
-        d = (t_exp <= t_w + self.task_prop[:, 2]).astype(int)
+        d = 1 * (t_exp - self.t_current <= t_w + self.task_prop[:, 2])
+        W_ave_total = np.sum(t_w_n * d) / N
+        D = np.sum(d) / N
 
-        print('Order of the tasks')
-        order_index = best_solution * (1 - d)
-        order_index = order_index[order_index > 0]
-        print(order_index)
+        lambda_ = 0.5
+        y = lambda_ * W_ave_total + (1 - lambda_) * D
 
-        print('Dropped tasks')
-        dropped = best_solution * d
-        dropped_index = np.where(dropped > 0)[0]
-        print(dropped_index)
+        return y
 
-# Example usage
-task_prop_total = [
-    [0, 3.1, 1], [0, 6.1, 3], [0, 1, 3], [0, 12.1, 3], [0, 15.1, 3],
-    [0, 18.1, 3], [0, 21.1, 3], [0, 3.1, 1], [0, 27.1, 3], [0, 1.1, 3],
-    [0, 21.1, 3], [0, 3.1, 1], [0, 27.1, 3], [0, 1.1, 3], [0, 6.1, 3],
-    [0, 1, 3], [0, 12.1, 3], [0, 15.1, 3]
-]
+    def initialize_population(self):
+        self.population = np.zeros((self.population_size, self.chromosome_length), dtype=int)
+        for i in range(self.population_size):
+            if i == 0:
+                self.population[i, :] = np.argsort(self.task_prop[:, 0])  # First come first served
+            elif i == 2:
+                self.population[i, :] = np.argsort(self.task_prop[:, 2])  # Shortest task first
+            elif i == 3:
+                self.population[i, :] = np.argsort(self.task_prop[:, 1])  # Shortest deadline first
+            else:
+                self.population[i, :] = np.random.permutation(self.chromosome_length)
 
-ga = GeneticAlgorithm(task_prop_total)
-ga.run()
+    def run_ga(self):
+        self.task_prop = self.task_prop_total[:self.chromosome_length, :]
+        self.initialize_population()
+
+        for generation in range(self.num_generations):
+            fitness = np.zeros(self.population_size)
+            for ii in range(self.population_size):
+                fitness[ii] = self.offloading_obj_fcn2(self.population[ii, :])
+
+            new_population = np.zeros_like(self.population)
+            for i in range(self.population_size):
+                tournament_indices = np.random.randint(0, self.population_size, self.tournament_size)
+                best_idx = tournament_indices[np.argmin(fitness[tournament_indices])]
+                new_population[i, :] = self.population[best_idx, :]
+
+            for i in range(self.population_size):
+                if np.random.rand() < self.mutation_rate:
+                    new_population[i, :] = np.random.permutation(self.chromosome_length)
+
+            for ii in range(self.population_size):
+                fitness[ii] = self.offloading_obj_fcn2(new_population[ii, :])
+
+            self.population = new_population
+
+            best_fitness = np.min(fitness)
+            print(f'Generation {generation}: Best Fitness = {best_fitness}')
+
+        self.best_fitness = np.min(fitness)
+        self.best_index = np.argmin(fitness)
+        self.best_solution = self.population[self.best_index, :]
+
+    def get_best_order(self):
+        t_w = np.zeros(self.chromosome_length)
+        ind = np.argsort(self.best_solution)
+        for i in range(self.chromosome_length):
+            for j in range(self.best_solution[i] - 1):
+                t_w[i] += self.task_prop[ind[j], 2]
+
+        t_w_n = (t_w - np.min(t_w)) / (np.max(t_w) - np.min(t_w))
+        t_exp = self.task_prop[:, 1] + self.task_prop[:, 0]
+        d = 1 * (t_exp - self.t_current <= t_w + self.task_prop[:, 2])
+
+        best_solution_sort = np.sort(self.best_solution)
+        ind_best = np.argsort(self.best_solution)
+        ind_best_served = []
+        ind_best_dropped = []
+
+        for i in range(self.chromosome_length):
+            if d[ind_best[i]] == 0:
+                ind_best_served.append(ind_best[i])
+            else:
+                ind_best_dropped.append(ind_best[i])
+
+        return ind_best_served, ind_best_dropped
+
+
+# Example usage:
+# task_prop_total = np.array([
+#     [0, 3.1, 1],
+#     [0, 6.1, 3],
+#     [0, 1, 3],
+#     [0, 12.1, 2],
+#     [0, 15.1, 3],
+#     [0, 18.1, 3],
+#     [0, 21.1, 3],
+#     [0, 3.1, 1],
+#     [0, 27.1, 3],
+#     [0, 1.1, 3],
+#     [0, 21.1, 3],
+#     [0, 3.1, 1],
+#     [0, 27.1, 3],
+#     [0, 1.1, 3],
+#     [0, 6.1, 1],
+#     [0, 1, 3],
+#     [0, 12.1, 3],
+#     [0, 15.1, 3]
+# ])
+
+# scheduler = GeneticAlgorithm(task_prop_total)
+# scheduler.run_ga()
+# best_order, dropped_tasks = scheduler.get_best_order()
+
+# print('Order of the tasks:', best_order)
+# print('Dropped task index:', dropped_tasks)

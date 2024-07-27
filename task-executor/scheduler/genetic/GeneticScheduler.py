@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import numpy as np
 import time
 import threading
 import os
@@ -46,6 +47,29 @@ class GeneticScheduler():
     def get_queue_size(self):
         return self.task_queue.qsize() + self.pending_queue.qsize()
     
+    def preprocess(self, arr):
+        # Convert to numpy array for easier manipulation
+        tasks_array = np.array(arr)
+
+        # Column 1 transformation
+        min_col1 = np.min(tasks_array[:, 0])
+        transformed_col1 = tasks_array[:, 0] - min_col1
+
+        # Column 2 creation
+        transformed_col2 = transformed_col1 + 0.3
+
+        # Column 3 transformation
+        transformed_col3 = tasks_array[:, 2] / 100
+
+        # Round each column to 2 decimal places
+        transformed_col1 = np.round(transformed_col1, 2)
+        transformed_col2 = np.round(transformed_col2, 2)
+        transformed_col3 = np.round(transformed_col3, 2)
+
+        # Combine all transformed columns into the final array
+        transformed_tasks = np.column_stack((transformed_col1, transformed_col2, transformed_col3))
+        return transformed_tasks
+
     def process_tasks(self):
         while True:
             try:
@@ -62,14 +86,19 @@ class GeneticScheduler():
                     
                     if(len(ga_tasks) == 0): continue
 
+                    ga_tasks = self.preprocess(ga_tasks)
                     geneticAlgo = GeneticAlgorithm(ga_tasks)
+                    geneticAlgo.run_ga()
+
                     # geneticAlgo.setTasks(ga_tasks)
                     
-                    [ga_tasks, min_waiting_time, min_tasks_dropped] = geneticAlgo.run()
+                    # [ga_tasks, min_waiting_time, min_tasks_dropped] = geneticAlgo.run()
+                    ga_tasks, dropped_tasks = geneticAlgo.get_best_order()
 
-                    print(ga_tasks, min_tasks_dropped, min_waiting_time)
-                    self.dropped_tasks_cnt += min_tasks_dropped
-                    self.total_tasks += min_tasks_dropped
+                    print("best order: ", ga_tasks)
+                    print("dropped tasks  =", dropped_tasks)
+                    self.dropped_tasks_cnt += len(dropped_tasks)
+                    self.total_tasks += len(dropped_tasks)
                     print("Dropped tasks added to Total tasks: ", self.total_tasks)
 
                     # empty task queue (10 elements max)
